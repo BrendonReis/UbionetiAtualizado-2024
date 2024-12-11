@@ -7,7 +7,6 @@ import { logger } from "../../utils/logger";
 import { isNil } from "lodash";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 
-
 type Session = WASocket & {
     id?: number;
 };
@@ -18,7 +17,6 @@ interface Request {
     ticket: Ticket;
     typebot: QueueIntegrations;
 }
-
 
 const typebotListener = async ({
     wbot,
@@ -44,39 +42,63 @@ const typebotListener = async ({
     let body = getBodyMessage(msg);
 
     async function createSession(msg, typebot, number) {
-        try {
-            const id = Math.floor(Math.random() * 10000000000).toString();
+        const MAX_RETRIES = 5;
+        let attempt = 0;
+    
+        while (attempt < MAX_RETRIES) {
+            try {
+                const id = Math.floor(Math.random() * 10000000000).toString();
+    
+                const reqData = JSON.stringify({
+                    "isStreamEnabled": true,
+                    "message": "string",
+                    "resultId": "string",
+                    "isOnlyRegistering": false,
+                    "prefilledVariables": {
+                        "number": number,
+                        "pushName": msg.pushName || ""
+                    },
+                });
 
-            const reqData = JSON.stringify({
-                "isStreamEnabled": true,
-                "message": "string",
-                "resultId": "string",
-                "isOnlyRegistering": false,
-                "prefilledVariables": {
-                    "number": number,
-                    "pushName": msg.pushName || ""
-                },
-            });
+                const urlFinal = `${url}/api/v1/typebots/${typebotSlug}/startChat`.replace(/([^:]\/)\/+/g, "$1");
+                console.log("URL final da requisição:", urlFinal);
+                console.log("Dados da requisição:", reqData);
+    
+                const config = {
+                    method: 'post',
+                    maxBodyLength: Infinity,
+                    url: urlFinal,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    data: reqData
+                }
 
-            const config = {
-                method: 'post',
-                maxBodyLength: Infinity,
-                url: `${url}/api/v1/typebots/${typebotSlug}/startChat`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                data: reqData
-            };
-
-            const request = await axios.request(config);
-
-            return request.data;
-
-        } catch (err) {
-            logger.info("Erro ao criar sessão do typebot: ", err)
-            throw err;
+                const request = await axios.request(config);
+                return request.data;
+    
+            } catch (err) {
+                if (err.response) {
+                    console.error(`Erro: ${err.response.status} - ${err.response.data}`);
+                    if (err.response.status === 404) {
+                        console.error('Session not found, retrying...');
+                        attempt++;
+                        await delay(1000);
+                    } else {
+                        logger.info("Erro ao criar sessão do typebot: ", err.response.data);
+                        throw err;
+                    }
+                } else {
+                    // Erros que não são de resposta (como problemas de rede)
+                    logger.info("Erro de rede ou outro: ", err.message);
+                    throw err;
+                }
+            }
+            
         }
+    
+        throw new Error('Maximum retries reached for creating typebot session.');
     }
 
 
@@ -116,29 +138,64 @@ const typebotListener = async ({
 
         //let body = getConversationMessage(msg);
 
+        const MAX_RETRIES = 5;
+        const RETRY_DELAY = 1000;
+
+        async function makeRequestWithRetries(config) {
+            let attempts = 0;
+            while (attempts < MAX_RETRIES) {
+                try {
+                    return await axios.request(config);
+                } catch (error) {
+                    if (error.response && error.response.status === 404) {
+                        console.error(`Attempt ${attempts + 1} failed with 404: ${error.message}`);
+                        break; 
+                    }
+                    attempts++;
+                    if (attempts < MAX_RETRIES) {
+                        console.log(`Attempt ${attempts} failed, retrying...`);
+                        await new Promise(res => setTimeout(res, RETRY_DELAY));
+                    } else {
+                        console.error('Max retries reached, throwing error');
+                        throw error;
+                    }
+                }
+            }
+        }
 
         if (body !== typebotKeywordFinish && body !== typebotKeywordRestart) {
-            let requestContinue
-            let messages
-            let input
+            let requestContinue;
+            let messages;
+            let input;
             if (dataStart?.messages.length === 0 || dataStart === undefined) {
                 const reqData = JSON.stringify({
                     "message": body
                 });
-
+        
+                const urlFinalContinue =  `${url}/api/v1/sessions/${sessionId}/continueChat`.replace(/([^:]\/)\/+/g, "$1");
+                console.log("URL final da requisição:", urlFinalContinue);
+                console.log("Dados da requisição:", reqData);
+        
                 let config = {
                     method: 'post',
                     maxBodyLength: Infinity,
-                    url: `${url}/api/v1/sessions/${sessionId}/continueChat`,
+                    url: urlFinalContinue,
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
                     data: reqData
                 };
-                requestContinue = await axios.request(config);
-                messages = requestContinue.data?.messages;
-                input = requestContinue.data?.input;
+        
+                try {
+                    requestContinue = await makeRequestWithRetries(config);
+                    messages = requestContinue.data?.messages;
+                    input = requestContinue.data?.input;
+                } catch (error) {
+                    console.error('Error while making request:', error);
+                    await wbot.sendMessage(`${number}@c.us`, { text: typebotUnknownMessage });
+                    return;
+                }
             } else {
                 messages = dataStart?.messages;
                 input = dataStart?.input;
@@ -388,12 +445,15 @@ const typebotListener = async ({
             await wbot.sendMessage(`${number}@c.us`, { text: typebotRestartMessage })
 
         }
-        if (body === typebotKeywordFinish) {
+        console.log("palavra para sair digitada: ", typebotKeywordFinish);
+        
+        if (body.toUpperCase() === typebotKeywordFinish) {
             await UpdateTicketService({
                 ticketData: {
                     status: "closed",
                     useIntegration: false,
-                    integrationId: null                   
+                    integrationId: null  ,
+                                     
                 },
                 ticketId: ticket.id,
                 companyId: ticket.companyId

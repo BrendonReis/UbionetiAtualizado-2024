@@ -13,7 +13,6 @@ class ManagedSocket {
       if (!this.rawSocket.recovered) {
         const refreshJoinsOnReady = () => {
           for (const j of this.joins) {
-            console.debug("refreshing join", j);
             this.rawSocket.emit(`join${j.event}`, ...j.params);
           }
           this.rawSocket.off("ready", refreshJoinsOnReady);
@@ -141,11 +140,7 @@ const SocketManager = {
       this.currentSocket.on("connect", (...params) => {
         console.warn("socket connected", params);
       })
-      
-      this.currentSocket.onAny((event, ...args) => {
-        console.debug("Event: ", { socket: this.currentSocket, event, args });
-      });
-      
+            
       this.onReady(() => {
         this.socketReady = true;
       });

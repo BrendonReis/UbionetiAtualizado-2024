@@ -176,9 +176,11 @@ const MessageInput = ({ ticketStatus }) => {
 	const { setReplyingMessage, replyingMessage } = useContext(
 		ReplyMessageContext
 	);
-	const { user } = useContext(AuthContext);
-
+	
 	const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
+
+	const { user } = useContext(AuthContext);
+	const { profile } = user;
 
 	useEffect(() => {
 		inputRef.current.focus();

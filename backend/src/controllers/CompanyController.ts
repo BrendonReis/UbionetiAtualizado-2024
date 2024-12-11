@@ -61,24 +61,46 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const newCompany: CompanyData = req.body;
 
+  console.log("Dados recebidos no store:", newCompany);
+
   const schema = Yup.object().shape({
-    name: Yup.string().required()
+    name: Yup.string().required("Name is required"),
+    email: Yup.string().email("Email must be valid").required("Email is required"),
+    phone: Yup.string()
+      .matches(/^\d+$/, "Phone must be a valid number")
+      .required("Phone is required"),
+    planId: Yup.number().required("Plan ID is required"),
+    status: Yup.boolean().required("Status is required"),
   });
 
   try {
-    await schema.validate(newCompany);
+    await schema.validate(newCompany, { abortEarly: false });
+
+    console.log("Dados passados para CreateCompanyService:", newCompany);
+
+    const company = await CreateCompanyService(newCompany);
+
+    return res.status(200).json(company);
+
   } catch (err: any) {
-    throw new AppError(err.message);
+    if (err instanceof Yup.ValidationError) {
+      const errors = err.inner.map((error) => ({
+        field: error.path,
+        message: error.message,
+      }));
+
+      return res.status(400).json({ errors });
+    }
+
+    return res.status(500).json({
+      error: err.message || "Internal server error",
+    });
   }
-
-  const company = await CreateCompanyService(newCompany);
-
-  return res.status(200).json(company);
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { id } = req.params;
-
+  console.log("ID recebido no parâmetro:", id); 
   const company = await ShowCompanyService(id);
 
   return res.status(200).json(company);
@@ -96,8 +118,10 @@ export const update = async (
 ): Promise<Response> => {
   const companyData: CompanyData = req.body;
 
+  console.log("Dados recebidos no update:", companyData);
+
   const schema = Yup.object().shape({
-    name: Yup.string()
+    name: Yup.string(),
   });
 
   try {
@@ -107,11 +131,13 @@ export const update = async (
   }
 
   const { id } = req.params;
+  console.log("ID recebido no update:", id);
 
   const company = await UpdateCompanyService({ id, ...companyData });
 
   return res.status(200).json(company);
 };
+
 
 export const updateSchedules = async (
   req: Request,

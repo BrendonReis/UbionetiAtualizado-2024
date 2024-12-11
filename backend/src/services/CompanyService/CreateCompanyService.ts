@@ -3,6 +3,8 @@ import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
 import User from "../../models/User";
 import Setting from "../../models/Setting";
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 interface CompanyData {
   name: string;
@@ -14,6 +16,10 @@ interface CompanyData {
   campaignsEnabled?: boolean;
   dueDate?: string;
   recurrence?: string;
+}
+
+const generateRandomPassword = (length: number): string => {
+  return crypto.randomBytes(length).toString('hex');
 }
 
 const CreateCompanyService = async (
@@ -30,6 +36,17 @@ const CreateCompanyService = async (
     dueDate,
     recurrence
   } = companyData;
+
+  console.log("Dados recebidos:", companyData);
+  console.log("Criando empresa com dados:", {
+  name,
+  phone,
+  email,
+  status,
+  planId,
+  dueDate,
+  recurrence
+  });
 
   const companySchema = Yup.object().shape({
     name: Yup.string()
@@ -54,8 +71,11 @@ const CreateCompanyService = async (
   try {
     await companySchema.validate({ name });
   } catch (err: any) {
+    console.error("Erro de validação:", err.message);
     throw new AppError(err.message);
   }
+
+  console.log("Criando a empresa no banco de dados...");
 
   const company = await Company.create({
     name,
@@ -67,13 +87,26 @@ const CreateCompanyService = async (
     recurrence
   });
 
+  console.log("Empresa criada com sucesso:", company);
+
+  const finalPassword = password || generateRandomPassword(12);
+  console.log("Senha utilizada:", finalPassword);
+
+  const hashedPassword = await bcrypt.hash(finalPassword, 8);
+
+  if (!password) {
+    console.log("Senha gerada automaticamente para o usuário.");
+  }
+
   const user = await User.create({
     name: company.name,
     email: company.email,
-    password: companyData.password,
+    passwordHash: hashedPassword,
     profile: "admin",
     companyId: company.id
   });
+
+  console.log("Usuário administrador criado:", user);
 
   await Setting.findOrCreate({
     where: {
@@ -169,7 +202,7 @@ const CreateCompanyService = async (
   await Setting.findOrCreate({
     where: {
       companyId: company.id,
-      key: ""
+      key: "call"
     },
     defaults: {
       companyId: company.id,
@@ -217,6 +250,32 @@ const CreateCompanyService = async (
       value: "disabled"
     },
  });
+
+   //sendManagerWait
+   await Setting.findOrCreate({
+    where: {
+      companyId: company.id,
+      key: "sendManagerWait"
+    },
+    defaults: {
+      companyId: company.id,
+      key: "sendManagerWait",
+      value: "disabled"
+    },
+  });
+
+    //sendManagerWaitMinutes
+     await Setting.findOrCreate({
+      where: {
+        companyId: company.id,
+        key: "sendManagerWaitMinutes"
+      },
+      defaults: {
+        companyId: company.id,
+        key: "sendManagerWaitMinutes",
+        value: "disabled"
+      },
+    });
 
   //userRating
   await Setting.findOrCreate({
@@ -280,6 +339,8 @@ const CreateCompanyService = async (
       value: ""
     },
   });
+
+  console.log("Configurações criadas para a empresa");
 
   if (companyData.campaignsEnabled !== undefined) {
     const [setting, created] = await Setting.findOrCreate({

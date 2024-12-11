@@ -21,6 +21,8 @@ import Ticket from "./Ticket";
 import TicketTraking from "./TicketTraking";
 import User from "./User";
 import UserRating from "./UserRating";
+import SendManagerWait from "./SendManagerWait";
+import SendManagerWaitMinutes from "./SendManagerWaitMinutes";
 import Whatsapp from "./Whatsapp";
 
 @Table
@@ -79,6 +81,20 @@ class Company extends Model<Company> {
     hooks: true
   })
   userRatings: UserRating[];
+
+  @HasMany(() => SendManagerWait, {
+    onUpdate: "CASCADE",
+    onDelete: "CASCADE",
+    hooks: true
+  })
+  sendManagerWait: SendManagerWait[];
+
+  @HasMany(() => SendManagerWaitMinutes, {
+    onUpdate: "CASCADE",
+    onDelete: "CASCADE",
+    hooks: true
+  })
+  sendManagerWaitMinutes: SendManagerWaitMinutes[];
 
   @HasMany(() => Queue, {
     onUpdate: "CASCADE",

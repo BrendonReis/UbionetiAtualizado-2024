@@ -17,7 +17,7 @@ import { grey, blue } from "@material-ui/core/colors";
 import { Tabs, Tab } from "@material-ui/core";
 
 //import 'react-toastify/dist/ReactToastify.css';
- 
+
 const useStyles = makeStyles((theme) => ({
   container: {
     paddingTop: theme.spacing(4),
@@ -107,15 +107,21 @@ export default function Options(props) {
 
   const [asaasType, setAsaasType] = useState("");
   const [loadingAsaasType, setLoadingAsaasType] = useState(false);
-  
+
   // recursos a mais da POWERTECH
 
   const [SendGreetingAccepted, setSendGreetingAccepted] = useState("disabled");
   const [loadingSendGreetingAccepted, setLoadingSendGreetingAccepted] = useState(false);
-  
+
+  const [sendSendManagerWait, setSendManagerWait] = useState("disabled");
+  const [loadingSendManagerWait, setloadingSendManagerWait] = useState(false);
+
+  const [sendSendManagerWaitMinutes, setSendManagerWaitMinutes] = useState("disabled");
+  const [loadingSendManagerWaitMinutes, setloadingSendManagerWaitMinutes] = useState(false);
+
   const [SettingsTransfTicket, setSettingsTransfTicket] = useState("disabled");
   const [loadingSettingsTransfTicket, setLoadingSettingsTransfTicket] = useState(false);
-  
+
   const [sendGreetingMessageOneQueues, setSendGreetingMessageOneQueues] = useState("disabled");
   const [loadingSendGreetingMessageOneQueues, setLoadingSendGreetingMessageOneQueues] = useState(false);
 
@@ -126,6 +132,10 @@ export default function Options(props) {
       const userRating = settings.find((s) => s.key === "userRating");
       if (userRating) {
         setUserRating(userRating.value);
+      }
+      const sendManagerWait = settings.find((s) => s.key === "sendManagerWait");
+      if (sendManagerWait) {
+        setSendGreetingAccepted(sendManagerWait.value);
       }
       const scheduleType = settings.find((s) => s.key === "scheduleType");
       if (scheduleType) {
@@ -139,32 +149,32 @@ export default function Options(props) {
       if (CheckMsgIsGroup) {
         setCheckMsgIsGroupType(CheckMsgIsGroup.value);
       }
-	  
-	  {/*POWERTECH SAUDAÇÃO*/}
+
+      {/*POWERTECH SAUDAÇÃO*/ }
       const SendGreetingAccepted = settings.find((s) => s.key === "sendGreetingAccepted");
       if (SendGreetingAccepted) {
         setSendGreetingAccepted(SendGreetingAccepted.value);
-      }	 
-	  {/*POWERTECH SAUDAÇÃO*/}	 
-	  
-	  {/*TRANSFERIR TICKET*/}	
-	  const SettingsTransfTicket = settings.find((s) => s.key === "sendMsgTransfTicket");
+      }
+      {/*POWERTECH SAUDAÇÃO*/ }
+
+      {/*TRANSFERIR TICKET*/ }
+      const SettingsTransfTicket = settings.find((s) => s.key === "sendMsgTransfTicket");
       if (SettingsTransfTicket) {
         setSettingsTransfTicket(SettingsTransfTicket.value);
       }
-	  {/*TRANSFERIR TICKET*/}
+      {/*TRANSFERIR TICKET*/ }
 
       const sendGreetingMessageOneQueues = settings.find((s) => s.key === "sendGreetingMessageOneQueues");
       if (sendGreetingMessageOneQueues) {
         setSendGreetingMessageOneQueues(sendGreetingMessageOneQueues.value)
-      }	  
-	  
+      }
+
       const chatbotType = settings.find((s) => s.key === "chatBotType");
       if (chatbotType) {
         setChatbotType(chatbotType.value);
       }
 
-	    {/*const ipixcType = settings.find((s) => s.key === "ipixc");
+      {/*const ipixcType = settings.find((s) => s.key === "ipixc");
       if (ipixcType) {
         setIpIxcType(ipixcType.value);
       }*/}
@@ -179,7 +189,7 @@ export default function Options(props) {
         setIpMkauthType(ipmkauthType.value);
       }*/}
 
-     {/* const clientidmkauthType = settings.find((s) => s.key === "clientidmkauth");
+      {/* const clientidmkauthType = settings.find((s) => s.key === "clientidmkauth");
       if (clientidmkauthType) {
         setClientIdMkauthType(clientidmkauthType.value);
       }*/}
@@ -207,15 +217,15 @@ export default function Options(props) {
     toast.success("Operação atualizada com sucesso.");
     setLoadingUserRating(false);
   }
-  
-    async function handleSendGreetingMessageOneQueues(value) {
+
+  async function handleSendGreetingMessageOneQueues(value) {
     setSendGreetingMessageOneQueues(value);
     setLoadingSendGreetingMessageOneQueues(true);
     await update({
       key: "sendGreetingMessageOneQueues",
       value,
     });
-	toast.success("Operação atualizada com sucesso.");
+    toast.success("Operação atualizada com sucesso.");
     setLoadingSendGreetingMessageOneQueues(false);
   }
 
@@ -235,7 +245,7 @@ export default function Options(props) {
       pauseOnHover: false,
       draggable: true,
       theme: "light",
-      });
+    });
     setLoadingScheduleType(false);
     if (typeof scheduleTypeChanged === "function") {
       scheduleTypeChanged(value);
@@ -277,8 +287,8 @@ export default function Options(props) {
           scheduleTypeChanged(value);
         } */
   }
-  
-  {/*NOVO CÓDIGO*/}  
+
+  {/*NOVO CÓDIGO*/ }
   async function handleSendGreetingAccepted(value) {
     setSendGreetingAccepted(value);
     setLoadingSendGreetingAccepted(true);
@@ -286,12 +296,33 @@ export default function Options(props) {
       key: "sendGreetingAccepted",
       value,
     });
-	toast.success("Operação atualizada com sucesso.");
+    toast.success("Operação atualizada com sucesso.");
     setLoadingSendGreetingAccepted(false);
-  }  
-  
-  
-  {/*NOVO CÓDIGO*/}    
+  }
+
+  async function handleSendManagerWait(value) {
+    setSendManagerWait(value);
+    setloadingSendManagerWait(true);
+    await update({
+      key: "sendManagerWait",
+      value,
+    });
+    toast.success("Operação atualizada com sucesso.");
+    setloadingSendManagerWait(false);
+  }
+
+  async function handleSendManagerWaitMinutes(value) {
+    setSendManagerWaitMinutes(value);
+    setloadingSendManagerWaitMinutes(true);
+    await update({
+      key: "sendManagerWaitMinutes",
+      value,
+    });
+    toast.success("Operação atualizada com sucesso.");
+    setloadingSendManagerWaitMinutes(false);
+  }
+
+  {/*NOVO CÓDIGO*/ }
 
   async function handleSettingsTransfTicket(value) {
     setSettingsTransfTicket(value);
@@ -303,9 +334,9 @@ export default function Options(props) {
 
     toast.success("Operação atualizada com sucesso.");
     setLoadingSettingsTransfTicket(false);
-  } 
- 
- {/*async function handleChangeIPIxc(value) {
+  }
+
+  {/*async function handleChangeIPIxc(value) {
     setIpIxcType(value);
     setLoadingIpIxcType(true);
     await update({
@@ -468,15 +499,15 @@ export default function Options(props) {
               }}
             >
               <MenuItem value={"text"}>Texto</MenuItem>
-			 {/*<MenuItem value={"button"}>Botão</MenuItem>*/}
-             {/*<MenuItem value={"list"}>Lista</MenuItem>*/}
+              {/*<MenuItem value={"button"}>Botão</MenuItem>*/}
+              {/*<MenuItem value={"list"}>Lista</MenuItem>*/}
             </Select>
             <FormHelperText>
               {loadingChatbotType && "Atualizando..."}
             </FormHelperText>
           </FormControl>
         </Grid>
-		{/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
+        {/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="sendGreetingAccepted-label">Enviar saudação ao aceitar o ticket</InputLabel>
@@ -495,9 +526,54 @@ export default function Options(props) {
             </FormHelperText>
           </FormControl>
         </Grid>
-		{/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
-		
-		{/* ENVIAR MENSAGEM DE TRANSFERENCIA DE SETOR/ATENDENTE */}
+        {/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
+
+        {/* GERENCIAR TEMPO DE ESPERA */}
+        <Grid xs={12} sm={6} md={4} item>
+          <FormControl className={classes.selectContainer}>
+            <InputLabel id="sendManagerWait-label">Gerenciar tempo de espera</InputLabel>
+            <Select
+              labelId="sendManagerWait-label"
+              value={sendSendManagerWait}
+              onChange={async (e) => {
+                handleSendManagerWait(e.target.value);
+              }}
+            >
+              <MenuItem value={"disabled"}>Desabilitado</MenuItem>
+              <MenuItem value={"enabled"}>Habilitado</MenuItem>
+            </Select>
+            <FormHelperText>
+              {loadingSendManagerWait && "Atualizando..."}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+        {/* GERENCIAR TEMPO DE ESPERA */}
+
+        <Grid xs={12} sm={6} md={4} item>
+          <FormControl className={classes.selectContainer}>
+            <TextField
+              id="sendManagerWaitMinutes"
+              label="Minutos"
+              type="number" 
+              value={sendSendManagerWaitMinutes}
+              onChange={(e) => {
+                setSendManagerWaitMinutes(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (!isNaN(parseInt(sendSendManagerWaitMinutes))) { 
+                    handleSendManagerWaitMinutes(sendSendManagerWaitMinutes); 
+                  } else {
+                    alert("Por favor, insira um número válido.");
+                  }
+                }
+              }}
+              helperText={loadingSendManagerWaitMinutes && "Atualizando..."}
+            />
+          </FormControl>
+        </Grid>
+
+        {/* ENVIAR MENSAGEM DE TRANSFERENCIA DE SETOR/ATENDENTE */}
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="sendMsgTransfTicket-label">Enviar mensagem de transferencia de Fila/agente</InputLabel>
@@ -516,8 +592,8 @@ export default function Options(props) {
             </FormHelperText>
           </FormControl>
         </Grid>
-		
-		{/* ENVIAR SAUDAÇÃO QUANDO HOUVER SOMENTE 1 FILA */}
+
+        {/* ENVIAR SAUDAÇÃO QUANDO HOUVER SOMENTE 1 FILA */}
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="sendGreetingMessageOneQueues-label">Enviar saudação quando houver somente 1 fila</InputLabel>
@@ -536,7 +612,7 @@ export default function Options(props) {
             </FormHelperText>
           </FormControl>
         </Grid>
-		
+
       </Grid>
       <Grid spacing={3} container>
         <Tabs

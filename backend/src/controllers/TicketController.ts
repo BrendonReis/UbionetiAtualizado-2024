@@ -116,10 +116,18 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   return res.status(200).json(ticket);
 };
 
-export const storePending = async (req: Request, res: Response): Promise<Response> => {
+export const storePending = async (req: Request, res: Response): Promise<Response> => { 
   const { contactId, status, userId, queueId, whatsappId }: TicketData = req.body;
   const { companyId } = req.user;
   const { uuid } = req.params;
+
+  console.log("Contact ID:", contactId);
+  console.log("Status:", status);
+  console.log("User ID:", userId);
+  console.log("Queue ID:", queueId);
+  console.log("Whatsapp ID:", whatsappId);
+  console.log("Company ID:", companyId);
+  console.log("UUID:", uuid);
 
   const ticket = await CreateTicketService({
     contactId,
@@ -211,13 +219,18 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
   const ticketData: TicketData = req.body;
   const { companyId } = req.user;
 
-  const { ticket } = await UpdateTicketService({
+  const result = await UpdateTicketService({
     ticketData,
     ticketId,
     companyId,
   });
 
-  return res.status(200).json(ticket);
+  if (!result || !result.ticket) {
+    console.error("Erro: Nenhum ticket retornado do serviço.");
+    return res.status(404).json({ message: "Ticket não encontrado ou não atualizado." });
+  }
+
+  return res.status(200).json(result.ticket);
 };
 
 export const remove = async (req: Request, res: Response): Promise<Response> => {

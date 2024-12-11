@@ -31,6 +31,8 @@ import formatBody from "../../helpers/Mustache";
 import { Store } from "../../libs/store";
 import TicketTraking from "../../models/TicketTraking";
 import UserRating from "../../models/UserRating";
+import SendManagerWait from "../../models/SendManagerWait";
+import SendManagerWaitMinutes from "../../models/SendManagerWaitMinutes";
 import SendWhatsAppMessage from "./SendWhatsAppMessage";
 import moment from "moment";
 import Queue from "../../models/Queue";
@@ -932,6 +934,45 @@ export const verifyMessage = async (
   const regex = /O protocolo do seu atendimento é: (\w+)/;
   const match = body.match(regex);
 
+  const regexFinalizar = /Agradecemos\./;
+  const matchFinalizar = body.match(regexFinalizar);
+  
+  if (matchFinalizar) {
+    const closedTickets: number[] = [];
+  
+    console.log('Frase encontrada:', matchFinalizar);
+  
+    const apiBody = {
+      contactId: contact.id,
+      status: ticket.status,
+      userId: ticket.userId,
+      uuId: ticket.uuid,
+      companyId: ticket.companyId,
+      queueId: ticket.queueId,
+      whatsappId: ticket.whatsappId
+    };
+
+    console.log('Dados do cliente:', JSON.stringify(apiBody));
+  
+    await ticket.update({
+      status: "pending",
+      promptId: null,
+      integrationId: null,
+      useIntegration: false,
+      typebotStatus: false,
+      typebotSessionId: null,
+      queueId: null,
+      chatbot: null,
+      queueOptionId: null,
+      userId: null,
+    });
+  
+    logger.info(`Ticket ${ticket.id} encerrado por fim de atendimento.`);
+  
+    closedTickets.push(ticket.id);
+  }
+  
+
   if (match) {
     const protocol = match[1];
     console.log('Protocolo capturado:', protocol);
@@ -953,7 +994,7 @@ export const verifyMessage = async (
         queueId: ticket.queueId,
         whatsappId: ticket.whatsappId
       };
-
+    
       console.log('Corpo da requisição:', JSON.stringify(apiBody));
 
       const response = await fetch(apiUrl, {
@@ -1345,6 +1386,21 @@ export const handleRating = async (
     userId: ticketTraking.userId,
     rate: finalRate,
   });
+
+  await SendManagerWait.create({
+    ticketId: ticketTraking.ticketId,
+    companyId: ticketTraking.companyId,
+    userId: ticketTraking.userId,
+    rate: finalRate,
+  });
+
+  await SendManagerWaitMinutes.create({
+    ticketId: ticketTraking.ticketId,
+    companyId: ticketTraking.companyId,
+    userId: ticketTraking.userId,
+    rate: finalRate,
+  });
+
 
   if (complationMessage) {
     const body = formatBody(`\u200e${complationMessage}`, ticket.contact);

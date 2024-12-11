@@ -16,6 +16,8 @@ import QuickMessage from "../models/QuickMessage";
 import Help from "../models/Help";
 import TicketTraking from "../models/TicketTraking";
 import UserRating from "../models/UserRating";
+import SendManagerWait from "../models/SendManagerWait";
+import SendManagerWaitMinutes from "../models/SendManagerWaitMinutes";
 import QueueOption from "../models/QueueOption";
 import Schedule from "../models/Schedule";
 import Tag from "../models/Tag";
@@ -62,6 +64,8 @@ const models = [
   Help,
   TicketTraking,
   UserRating,
+  SendManagerWait,
+  SendManagerWaitMinutes,
   QueueOption,
   Schedule,
   Tag,

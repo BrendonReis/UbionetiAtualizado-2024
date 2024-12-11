@@ -47,6 +47,20 @@ module.exports = {
                             updatedAt: new Date()
                         },
                         {
+                            key: "sendManagerWait",
+                            value: "disabled",
+                            companyId: 1,
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        },
+                        {
+                            key: "sendManagerWaitMinutes",
+                            value: "disabled",
+                            companyId: 1,
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        },
+                        {
                             key: "scheduleType",
                             value: "queue",
                             companyId: 1,

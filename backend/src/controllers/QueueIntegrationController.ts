@@ -36,7 +36,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const queueIntegration = await CreateQueueIntegrationService({
     type, name, projectName, jsonContent, language, urlN8N, companyId,
     typebotExpires,
-    typebotKeywordFinish,
+    typebotKeywordFinish: typebotKeywordFinish ? typebotKeywordFinish.toUpperCase() : "",
     typebotSlug,
     typebotUnknownMessage,
     typebotKeywordRestart,

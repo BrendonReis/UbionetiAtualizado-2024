@@ -16,6 +16,8 @@ import Divider from "@material-ui/core/Divider";
 import Badge from "@material-ui/core/Badge";
 import Box from "@material-ui/core/Box";
 
+import { SocketContext } from "../../context/Socket/SocketContext";
+
 import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
@@ -27,14 +29,12 @@ import { TicketsContext } from "../../context/Tickets/TicketsContext";
 import toastError from "../../errors/toastError";
 import { v4 as uuidv4 } from "uuid";
 
-import RoomIcon from '@material-ui/icons/Room';
-import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import AndroidIcon from "@material-ui/icons/Android";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import TicketMessagesDialog from "../TicketMessagesDialog";
-import DoneIcon from '@material-ui/icons/Done';
-import ClearOutlinedIcon from '@material-ui/icons/ClearOutlined';
-import contrastColor from "../../helpers/contrastColor";
+
+import ReportProblemIcon from '@material-ui/icons/ReportProblem';
+
 import ContactTag from "../ContactTag";
 
 const useStyles = makeStyles((theme) => ({
@@ -183,8 +183,8 @@ const useStyles = makeStyles((theme) => ({
 
   }
 }));
-  {/*POWERTECH INSERIDO O dentro do const handleChangeTab*/}
-  const TicketListItemCustom = ({ ticket }) => {
+{/*POWERTECH INSERIDO O dentro do const handleChangeTab*/ }
+const TicketListItemCustom = ({ ticket, showTooltip }) => {
   const classes = useStyles();
   const history = useHistory();
   const [loading, setLoading] = useState(false);
@@ -193,6 +193,10 @@ const useStyles = makeStyles((theme) => ({
   const [ticketQueueColor, setTicketQueueColor] = useState(null);
   const [tag, setTag] = useState([]);
   const [whatsAppName, setWhatsAppName] = useState(null);
+
+  const [ticketData, setTicketData] = useState(ticket);
+
+  const socketManager = useContext(SocketContext);
 
   const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
   const { ticketId } = useParams();
@@ -220,7 +224,7 @@ const useStyles = makeStyles((theme) => ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  {/*CÓDIGO NOVO SAUDAÇÃO*/}
+  {/*CÓDIGO NOVO SAUDAÇÃO*/ }
   const handleCloseTicket = async (id) => {
     setTag(ticket?.tags);
     setLoading(true);
@@ -261,62 +265,62 @@ const useStyles = makeStyles((theme) => ({
     history.push(`/tickets/${ticket.uuid}`);
   };
 
-    const handleAcepptTicket = async (id) => {
-        setLoading(true);
-        try {
-            await api.put(`/tickets/${id}`, {
-                status: "open",
-                userId: user?.id,
-            });
-            
-            let settingIndex;
+  const handleAcepptTicket = async (id) => {
+    setLoading(true);
+    try {
+      await api.put(`/tickets/${id}`, {
+        status: "open",
+        userId: user?.id,
+      });
 
-            try {
-                const { data } = await api.get("/settings/");
-                
-                settingIndex = data.filter((s) => s.key === "sendGreetingAccepted");
-                
-            } catch (err) {
-                //toastError(err);
-                   
-            }
-            
-            if (settingIndex[0].value === "enabled" && !ticket.isGroup) {
-                handleSendMessage(ticket.id);
-                
-            }
+      let settingIndex;
 
-        } catch (err) {
-            setLoading(false);
-            
-            //toastError(err);
-        }
-        if (isMounted.current) {
-            setLoading(false);
-        }
+      try {
+        const { data } = await api.get("/settings/");
 
-        // handleChangeTab(null, "tickets");
-        // handleChangeTab(null, "open");
-        history.push(`/tickets/${ticket.uuid}`);
+        settingIndex = data.filter((s) => s.key === "sendGreetingAccepted");
+
+      } catch (err) {
+        //toastError(err);
+
+      }
+
+      if (settingIndex[0].value === "enabled" && !ticket.isGroup) {
+        handleSendMessage(ticket.id);
+
+      }
+
+    } catch (err) {
+      setLoading(false);
+
+      //toastError(err);
+    }
+    if (isMounted.current) {
+      setLoading(false);
+    }
+
+    // handleChangeTab(null, "tickets");
+    // handleChangeTab(null, "open");
+    history.push(`/tickets/${ticket.uuid}`);
+  };
+
+  const handleSendMessage = async (id) => {
+
+    const msg = `{{ms}} *{{name}}*, meu nome é *${user?.name}* e agora vou prosseguir com seu atendimento!`;
+    const message = {
+      read: 1,
+      fromMe: true,
+      mediaUrl: "",
+      body: `*Mensagem Automática:*\n${msg.trim()}`,
     };
-	
-	    const handleSendMessage = async (id) => {
-        
-        const msg = `{{ms}} *{{name}}*, meu nome é *${user?.name}* e agora vou prosseguir com seu atendimento!`;
-        const message = {
-            read: 1,
-            fromMe: true,
-            mediaUrl: "",
-            body: `*Mensagem Automática:*\n${msg.trim()}`,
-        };
-        try {
-            await api.post(`/messages/${id}`, message);
-        } catch (err) {
-            toastError(err);
-            
-        }
-    };
-	{/*CÓDIGO NOVO SAUDAÇÃO*/}
+    try {
+      await api.post(`/messages/${id}`, message);
+    } catch (err) {
+      toastError(err);
+
+    }
+  };
+  {/*CÓDIGO NOVO SAUDAÇÃO*/ }
 
   const handleSelectTicket = (ticket) => {
     const code = uuidv4();
@@ -324,6 +328,53 @@ const useStyles = makeStyles((theme) => ({
     setCurrentTicket({ id, uuid, code });
   };
 
+  const isTicketPending = () => {
+    if (ticketData.status !== "pending") return false;
+
+    const updatedAt = new Date(ticketData.updatedAt);
+    const now = new Date();
+    const timeDiff = now - updatedAt;
+    const oneMinuteInMillis = 60 * 1000;
+
+    return timeDiff > oneMinuteInMillis;
+  };
+
+  useEffect(() => {
+    const socket = socketManager.getSocket(user.companyId);
+
+    const handleSocketUpdate = (data) => {
+      if (data.action === "pendingTicket") {
+        setTicketData((prevData) => {
+          if (prevData.id === data.ticket.id) {
+            return { ...prevData, ...data.ticket };
+          }
+          return prevData;
+        });
+      }
+    };
+
+    socket.on(`company-${user.companyId}-notification`, handleSocketUpdate);
+
+    return () => {
+      socket.off(`company-${user.companyId}-notification`, handleSocketUpdate);
+    };
+  }, [ticket.id, user.companyId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (ticketData.status === "pending") {
+        api.get(`/tickets/${ticketData.id}`)
+          .then((response) => {
+            setTicketData(response.data);
+          })
+          .catch((error) => {
+            console.error('Erro ao atualizar ticket', error);
+          });
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [ticketData.status, ticketData.id]);
 
   const renderTicketInfo = () => {
     if (ticketUser) {
@@ -409,33 +460,49 @@ const useStyles = makeStyles((theme) => ({
 
           primary={
             <span className={classes.contactNameWrapper}>
-              <Typography
-                noWrap
-                component="span"
-                variant="body2"
-                color="textPrimary"
-              >
+              <Typography noWrap component="span" variant="body2" color="textPrimary">
                 {ticket.contact.name}
                 {profile === "admin" && (
-                  <Tooltip title="Espiar Conversa">
-                    <VisibilityIcon
-                      onClick={() => setOpenTicketMessageDialog(true)}
-                      fontSize="small"
-                      style={{
-                        color: blue[700],
-                        cursor: "pointer",
-                        marginLeft: 10,
-                        verticalAlign: "middle"
-                      }}
-                    />
-                  </Tooltip>
+                  <Box
+                    component="span"
+                    display="inline-flex"
+                    alignItems="center"
+                    style={{ marginLeft: 10 }}
+                  >
+                    <Tooltip title="Espiar Conversa">
+                      <VisibilityIcon
+                        onClick={() => setOpenTicketMessageDialog(true)}
+                        fontSize="small"
+                        style={{
+                          color: blue[700],
+                          cursor: "pointer",
+                          marginRight: 5,
+                          verticalAlign: "middle",
+                        }}
+                      />
+                    </Tooltip>
+
+                    {/* Verifique se o ticket está pendente para exibir o ícone */}
+                    {isTicketPending(ticket) && (
+                      <Tooltip title="Atendimento em Atraso">
+                        <ReportProblemIcon
+                          onClick={() => console.info("Ícone de problema clicado!")}
+                          fontSize="small"
+                          style={{
+                            color: red[700],
+                            cursor: "pointer",
+                            verticalAlign: "middle",
+                          }}
+                        />
+                      </Tooltip>
+                    )}
+                  </Box>
                 )}
               </Typography>
               <ListItemSecondaryAction>
                 <Box className={classes.ticketInfo1}>{renderTicketInfo()}</Box>
               </ListItemSecondaryAction>
             </span>
-
           }
           secondary={
             <span className={classes.contactNameWrapper}>
@@ -505,10 +572,10 @@ const useStyles = makeStyles((theme) => ({
               className={classes.acceptButton}
               size="small"
               loading={loading}
-			  //POWERTECH INSERIDO O handleChangeTab
+              //POWERTECH INSERIDO O handleChangeTab
               onClick={e => handleAcepptTicket(ticket.id)}
             >
-            {i18n.t("ticketsList.buttons.accept")}
+              {i18n.t("ticketsList.buttons.accept")}
             </ButtonWithSpinner>
 
           )}
@@ -520,10 +587,10 @@ const useStyles = makeStyles((theme) => ({
               className={classes.acceptButton}
               size="small"
               loading={loading}
-			  //POWERTECH INSERIDO O handleChangeTab
+              //POWERTECH INSERIDO O handleChangeTab
               onClick={e => handleAcepptTicket(ticket.id)}
             >
-            {i18n.t("ticketsList.buttons.accept")}
+              {i18n.t("ticketsList.buttons.accept")}
             </ButtonWithSpinner>
 
           )}
@@ -537,7 +604,7 @@ const useStyles = makeStyles((theme) => ({
               loading={loading}
               onClick={e => handleCloseTicket(ticket.id)}
             >
-            {i18n.t("ticketsList.buttons.closed")}
+              {i18n.t("ticketsList.buttons.closed")}
             </ButtonWithSpinner>
           )}
           {(ticket.status === "closed") && (
